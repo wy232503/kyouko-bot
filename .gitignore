@@ -1,0 +1,6 @@
+.env
+emotion_state.json
+send_state.json
+__pycache__/
+*.pyc
+.DS_Store

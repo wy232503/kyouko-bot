@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>京子 - AI Girlfriend</title>
+<style>
+  :root {
+    --bg: #fdf6f0;
+    --chat-bg: #fffaf5;
+    --primary: #e8817a;
+    --primary-dark: #c96a63;
+    --bubble-user: #ffecd2;
+    --bubble-hori: #fff;
+    --text: #4a3728;
+    --text-light: #8b7355;
+    --border: #f0d5c0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.06);
+    --radius: 16px;
+    --accent: #f4a261;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #fef5ee 0%, #fce4d6 30%, #fdf0f5 60%, #fef5ee 100%);
+    background-attachment: fixed;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text);
+  }
+
+  /* 手机壳造型的聊天框 */
+  .phone-frame {
+    width: 420px;
+    max-width: 100vw;
+    height: 92vh;
+    max-height: 800px;
+    background: var(--chat-bg);
+    border-radius: 28px;
+    box-shadow: 0 20px 60px rgba(180, 120, 80, 0.15), 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  @media (max-width: 440px) {
+    .phone-frame {
+      width: 100vw;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+    }
+  }
+
+  /* 顶部导航栏 */
+  .header {
+    background: linear-gradient(135deg, #f8c4b8, #e8817a);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(232, 129, 122, 0.25);
+    position: relative;
+    z-index: 1;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffe0d0, #f8b8a0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+  }
+
+  .header-info h2 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .header-info p {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+  }
+
+  .header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+
+  .header-actions button {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .header-actions button:hover {
+    background: rgba(255,255,255,0.4);
+  }
+
+  /* 聊天区域 */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,220,200,0.15) 0%, transparent 70%);
+  }
+
+  /* 自定义滚动条 */
+  .chat-area::-webkit-scrollbar {
+    width: 4px;
+  }
+  .chat-area::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  /* 气泡 */
+  .message {
+    display: flex;
+    gap: 8px;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message .bubble-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .message.hori .bubble-avatar {
+    background: linear-gradient(135deg, #ffe0d0, #f8b8a0);
+  }
+
+  .message.user .bubble-avatar {
+    background: linear-gradient(135deg, #d4e6f1, #a9cce3);
+  }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    line-height: 1.55;
+    font-size: 14.5px;
+    word-break: break-word;
+    position: relative;
+  }
+
+  .message.hori .bubble {
+    background: var(--bubble-hori);
+    border: 1.5px solid var(--border);
+    border-top-left-radius: 4px;
+    box-shadow: var(--shadow);
+  }
+
+  .message.user .bubble {
+    background: linear-gradient(135deg, #fff0e0, #ffe4cc);
+    border-top-right-radius: 4px;
+    color: var(--text);
+  }
+
+  /* 打字中动画 */
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+  }
+
+  .typing-indicator span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d0b8a8;
+    animation: bounce 1.4s infinite ease-in-out;
+  }
+
+  .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* 输入区域 */
+  .input-area {
+    padding: 12px 16px;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-area textarea {
+    flex: 1;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+    background: #fefaf7;
+    color: var(--text);
+    transition: border-color 0.2s;
+    max-height: 100px;
+    line-height: 1.4;
+    font-family: inherit;
+  }
+
+  .input-area textarea:focus {
+    border-color: var(--primary);
+  }
+
+  .input-area textarea::placeholder {
+    color: #c9b8a8;
+  }
+
+  .send-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f0a090, #e8817a);
+    border: none;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(232, 129, 122, 0.3);
+  }
+
+  .send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 14px rgba(232, 129, 122, 0.4);
+  }
+
+  .send-btn:active {
+    transform: scale(0.95);
+  }
+
+  .send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* 空状态 */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: var(--text-light);
+    text-align: center;
+    padding: 40px;
+  }
+
+  .empty-state .icon {
+    font-size: 56px;
+    margin-bottom: 16px;
+    opacity: 0.7;
+  }
+
+  .empty-state h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .empty-state p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .empty-state .hint-list {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  .hint-chip {
+    padding: 6px 14px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+  }
+
+  .hint-chip:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <!-- 顶部 -->
+  <div class="header">
+    <div class="avatar">💕</div>
+    <div class="header-info">
+      <h2>京 子</h2>
+      <p>你的 AI 女友 · 在线中</p>
+    </div>
+    <div class="header-actions">
+      <button onclick="resetChat()" title="重置对话">🔄</button>
+    </div>
+  </div>
+
+  <!-- 聊天区 -->
+  <div class="chat-area" id="chatArea">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">💕</div>
+      <h3>你好！我是你的女朋友京子~</h3>
+      <p>有什么想聊的？我会每天跟你说早安晚安哦 (〃ω〃)</p>
+      <div class="hint-list">
+        <span class="hint-chip" onclick="sendHint(this.textContent)">宝贝在干嘛？</span>
+        <span class="hint-chip" onclick="sendHint(this.textContent)">今天想我了吗？</span>
+        <span class="hint-chip" onclick="sendHint(this.textContent)">今晚吃什么？</span>
+        <span class="hint-chip" onclick="sendHint(this.textContent)">今天过得怎么样？</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 输入区 -->
+  <div class="input-area">
+    <textarea
+      id="msgInput"
+      rows="1"
+      placeholder="说点什么吧……"
+      onkeydown="handleKeyDown(event)"
+      oninput="autoResize(this)"
+    ></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()" title="发送">
+      ➤
+    </button>
+  </div>
+</div>
+
+<script>
+  // ---------- 状态 ----------
+  let sessionId = localStorage.getItem('hori_session_id') || '';
+  let isStreaming = false;
+
+  const chatArea = document.getElementById('chatArea');
+  const msgInput = document.getElementById('msgInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const emptyState = document.getElementById('emptyState');
+
+  // ---------- 工具函数 ----------
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  function scrollToBottom() {
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  // ---------- 创建消息气泡 ----------
+  function createBubble(role, text) {
+    const isUser = role === 'user';
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${role}`;
+
+    const avatarEmoji = isUser ? '😊' : '🎀';
+
+    msgDiv.innerHTML = `
+      <div class="bubble-avatar">${avatarEmoji}</div>
+      <div class="bubble">${escapeHtml(text)}</div>
+    `;
+    return msgDiv;
+  }
+
+  function createTypingBubble() {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message hori';
+    msgDiv.id = 'typingBubble';
+    msgDiv.innerHTML = `
+      <div class="bubble-avatar">🎀</div>
+      <div class="bubble typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    `;
+    return msgDiv;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML.replace(/\n/g, '<br>');
+  }
+
+  // ---------- 发送消息 ----------
+  async function sendMessage(text) {
+    const message = text || msgInput.value.trim();
+    if (!message || isStreaming) return;
+
+    // 隐藏空状态
+    if (emptyState) emptyState.style.display = 'none';
+
+    // 显示用户消息
+    const userBubble = createBubble('user', message);
+    chatArea.appendChild(userBubble);
+    scrollToBottom();
+
+    // 清空输入
+    msgInput.value = '';
+    msgInput.style.height = 'auto';
+
+    // 显示打字中
+    const typingBubble = createTypingBubble();
+    chatArea.appendChild(typingBubble);
+    scrollToBottom();
+
+    // 流式请求
+    isStreaming = true;
+    sendBtn.disabled = true;
+
+    const params = new URLSearchParams({ message, session_id: sessionId });
+    const url = `/api/chat/stream?${params}`;
+
+    try {
+      const response = await fetch(url);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      // 替换 typing 为真实气泡
+      typingBubble.remove();
+
+      const horiBubble = createBubble('hori', '');
+      const bubbleContent = horiBubble.querySelector('.bubble');
+      chatArea.appendChild(horiBubble);
+
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.text) {
+                bubbleContent.innerHTML += escapeHtml(data.text);
+                scrollToBottom();
+              }
+              if (data.session_id) {
+                sessionId = data.session_id;
+                localStorage.setItem('hori_session_id', sessionId);
+              }
+              if (data.error) {
+                bubbleContent.innerHTML += escapeHtml(data.error);
+              }
+            } catch (e) {
+              // 非 JSON，跳过
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Stream error:', err);
+      const errBubble = createBubble('hori', '啊，网络好像不太稳定……稍等一下再说吧？');
+      chatArea.appendChild(errBubble);
+    } finally {
+      isStreaming = false;
+      sendBtn.disabled = false;
+      msgInput.focus();
+      scrollToBottom();
+    }
+  }
+
+  // ---------- 键盘事件 ----------
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // ---------- 快捷提示 ----------
+  function sendHint(text) {
+    msgInput.value = text;
+    sendMessage(text);
+  }
+
+  // ---------- 重置对话 ----------
+  async function resetChat() {
+    if (isStreaming) return;
+    if (sessionId) {
+      try {
+        await fetch(`/api/reset?session_id=${sessionId}`, { method: 'POST' });
+      } catch (e) { /* ignore */ }
+    }
+    sessionId = '';
+    localStorage.removeItem('hori_session_id');
+    chatArea.innerHTML = `
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🍳</div>
+        <h3>对话已重置~</h3>
+        <p>有什么想聊的？</p>
+        <div class="hint-list">
+          <span class="hint-chip" onclick="sendHint(this.textContent)">宝贝在干嘛？</span>
+          <span class="hint-chip" onclick="sendHint(this.textContent)">今天想我了吗？</span>
+          <span class="hint-chip" onclick="sendHint(this.textContent)">今晚吃什么？</span>
+          <span class="hint-chip" onclick="sendHint(this.textContent)">今天过得怎么样？</span>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------- 主动消息推送监听 ----------
+  function connectPushStream() {
+    const pushUrl = '/api/push';
+    const pushSource = new EventSource(pushUrl);
+
+    pushSource.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'proactive' && data.content) {
+          // 隐藏空状态
+          const empty = document.getElementById('emptyState');
+          if (empty) empty.style.display = 'none';
+
+          // 显示京子主动发来的消息
+          const bubble = createBubble('hori', data.content);
+          chatArea.appendChild(bubble);
+          scrollToBottom();
+        }
+        // heartbeat 和 connected 类型忽略
+      } catch (e) {
+        // 忽略解析错误
+      }
+    };
+
+    pushSource.onerror = function() {
+      console.log('Push stream disconnected, reconnecting in 10s...');
+      pushSource.close();
+      setTimeout(connectPushStream, 10000);
+    };
+
+    return pushSource;
+  }
+
+  // ---------- 初始化 ----------
+  msgInput.focus();
+  let pushSource = connectPushStream();
+</script>
+
+</body>
+</html>
