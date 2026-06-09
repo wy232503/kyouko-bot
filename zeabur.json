@@ -1,11 +1,3 @@
 {
-  "build": {
-    "python": {
-      "entry": "main.py"
-    }
-  },
-  "deploy": {
-    "port": 8000,
-    "healthCheckPath": "/health"
-  }
+  "start_command": "python main.py"
 }
